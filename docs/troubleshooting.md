@@ -1,230 +1,223 @@
-# Проблемы и решения
+# Частые ошибки
 
-## nvm: command not found
+По темам: [Linux](#linux), [Git](#git), [Python](#python), [Docker](#docker), [Node.js](#nodejs), [VS Code](#vs-code).
 
-**Причина:** nvm — это функция оболочки, она подгружается из `~/.nvm/nvm.sh` при старте терминала.
+## Linux
 
-**Решение 1.** Открыть новый терминал.
+### `Permission denied`
 
-**Решение 2.** Подгрузить вручную:
+```bash
+ls -l файл          # посмотреть права
+chmod +x файл       # если это скрипт
+sudo команда        # если действие требует администратора
+```
+
+Если файл принадлежит другому пользователю:
+
+```bash
+sudo chown -R "$USER":"$USER" папка
+```
+
+### `Could not get lock /var/lib/dpkg/lock-frontend`
+
+Другой процесс уже работает с `apt`:
+
+```bash
+sudo killall apt apt-get
+sudo rm /var/lib/apt/lists/lock
+sudo rm /var/cache/apt/archives/lock
+sudo rm /var/lib/dpkg/lock*
+sudo dpkg --configure -a
+sudo apt update
+```
+
+### `No space left on device`
+
+```bash
+df -h               # где закончилось место
+ncdu ~              # что занимает
+sudo apt autoremove -y
+sudo apt clean
+```
+
+### `command not found`, хотя пакет установлен
+
+```bash
+which команда
+echo $PATH
+hash -r             # сбросить кэш путей
+```
+
+Часто помогает открыть новый терминал.
+
+### `bash: ./script.sh: /bin/bash^M: bad interpreter`
+
+Скрипт сохранён с виндовыми переводами строк:
+
+```bash
+sed -i 's/\r$//' script.sh
+# или
+sudo apt install -y dos2unix && dos2unix script.sh
+```
+
+## Git
+
+### `rejected ... non-fast-forward`
+
+```bash
+git pull --rebase
+git push
+```
+
+### `Please tell me who you are`
+
+```bash
+git config --global user.name "Имя Фамилия"
+git config --global user.email "почта@example.com"
+```
+
+### `Permission denied (publickey)`
+
+```bash
+ssh -T git@github.com
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub      # ключ должен быть добавлен на GitHub
+```
+
+### `fatal: not a git repository`
+
+```bash
+cd папка-проекта
+git init
+```
+
+### Случайно закоммитил пароль или `.env`
+
+```bash
+git rm --cached .env
+echo ".env" >> .gitignore
+git commit -m "убрать .env из репозитория"
+```
+
+Пароль всё равно остался в истории — сменить его. Для новых проектов сразу создавать `.gitignore`.
+
+## Python
+
+### `externally-managed-environment`
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install пакет
+```
+
+### `ModuleNotFoundError`, хотя пакет установлен
+
+Пакет стоит в другом окружении:
+
+```bash
+which python3
+pip -V
+```
+
+Оба пути должны указывать внутрь `.venv`.
+
+### `No module named venv`
+
+```bash
+sudo apt install -y python3-venv
+```
+
+### `IndentationError`
+
+Смешаны табы и пробелы. В VS Code: `Ctrl+Shift+P` → **Convert Indentation to Spaces**, размер 4.
+
+## Docker
+
+### `permission denied ... /var/run/docker.sock`
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### `port is already allocated`
+
+```bash
+ss -tulpn | grep 8080
+docker run -p 8081:80 ...
+```
+
+### `Cannot connect to the Docker daemon`
+
+```bash
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+## Node.js
+
+### `nvm: command not found`
 
 ```bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 ```
 
-**Решение 3.** Проверить, что установщик дописал строки в конфиг оболочки:
+Подробно — [node-nvm-opencode.md](node-nvm-opencode.md#проблемы).
+
+### `EACCES` при `npm install -g`
+
+Не использовать `sudo npm`. Настроить nvm или свой prefix:
 
 ```bash
-tail -n 10 ~/.bashrc     # для bash
-tail -n 10 ~/.zshrc      # для zsh
-```
-
-Если строк нет — добавить:
-
-```bash
-echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
-echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> ~/.bashrc
-source ~/.bashrc
-```
-
----
-
-## После `nvm use` версия Node.js не меняется
-
-Проверить, откуда берётся `node`:
-
-```bash
-which node
-type -a node
-```
-
-Если путь `/usr/bin/node` или `/usr/local/bin/node` — системный Node.js перекрывает nvm.
-
-**Решение:** удалить системную установку, если она не нужна:
-
-```bash
-sudo apt-get purge -y nodejs npm     # Debian / Ubuntu
-sudo dnf remove -y nodejs npm        # Fedora
-```
-
-Затем снова:
-
-```bash
-nvm use --lts
-which node   # должно быть ~/.nvm/versions/node/v26.x.x/bin/node
-```
-
-Отдельный случай — **VS Code**: он запоминает `PATH` при запуске. После `nvm alias default` нужно полностью закрыть и открыть редактор.
-
----
-
-## `nvm ls-remote` ничего не выводит или падает
-
-nvm запрашивает список версий с `nodejs.org`.
-
-```bash
-# проверить доступ
-curl -I https://nodejs.org/dist/index.json
-```
-
-**Если ошибка 403 / таймаут:** сеть блокирует запросы. Варианты:
-
-```bash
-# 1. указать зеркало
-export NVM_NODEJS_ORG_MIRROR=https://npmmirror.com/mirrors/node
-nvm ls-remote --lts
-
-# 2. проверить прокси
-echo $http_proxy $https_proxy
-```
-
----
-
-## Установка nvm падает с ошибкой про `git`
-
-Старый установщик использовал `git clone`. Обновите команду до актуальной (v0.41.0):
-
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh | bash
-```
-
----
-
-## `npm install -g` падает с `EACCES: permission denied`
-
-**Не используйте `sudo npm install -g`** — это ломает права на файлы и кэш.
-
-Правильные варианты:
-
-**Вариант 1 (рекомендуется).** Работать через nvm — там глобальные пакеты ставятся в домашнюю папку:
-
-```bash
-nvm install --lts
-npm install -g @opencode/cli
-```
-
-**Вариант 2.** Сменить папку глобальных пакетов:
-
-```bash
-mkdir -p ~/.npm-global
 npm config set prefix "$HOME/.npm-global"
 echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
----
+### `npm ERR! code EJSONPARSE`
 
-## OpenCode: `command not found` или `npx` ругается
-
-Запуск без установки:
+Сломан `package.json` (лишняя запятая, комментарий). Проверить:
 
 ```bash
-npx --yes @opencode/cli@latest
+node -e "JSON.parse(require('fs').readFileSync('package.json'))"
 ```
 
-Если npx не находит пакет:
+### Забыл `npm install` после `git clone`
 
 ```bash
-npm config get registry          # должен быть https://registry.npmjs.org/
-npm cache clean --force
+npm install
 ```
 
-Постоянная установка:
+## VS Code
+
+### `code: command not found`
+
+`Ctrl+Shift+P` → **Shell Command: Install 'code' command in PATH**.
+
+### Терминал VS Code не видит Node из nvm
+
+Полностью закрыть и открыть VS Code — он запоминает `PATH` при старте.
+
+### Расширение Python не видит `.venv`
+
+`Ctrl+Shift+P` → **Python: Select Interpreter** → выбрать путь `.venv/bin/python`.
+Проверить, что окружение создано **внутри** папки проекта.
+
+### Файлы в Git изменились сами (CRLF → LF)
 
 ```bash
-npm install -g @opencode/cli
-hash -r          # сбросить кэш путей оболочки
-opencode
+git config --global core.autocrlf input   # Linux
+git config --global core.autocrlf true    # Windows
 ```
 
-Проверить, что бинарник на месте:
+## Универсальное
+
+Не понимаю, что не так — начните с диагностики:
 
 ```bash
-npm ls -g --depth=0 | grep opencode
-which opencode
+bash scripts/check-env.sh
 ```
 
----
-
-## OpenCode запускается, но не подключается провайдер моделей
-
-Внутри интерфейса:
-
-```
-/connect
-```
-
-и выбрать провайдера. Для OpenCode Console / Anthropic / OpenAI потребуется вход или API-ключ.
-
-Проверить конфигурацию:
-
-```
-opencode service status
-```
-
-Логи:
-
-```bash
-cat ~/.local/share/opencode/log/opencode.log | tail -n 100
-```
-
----
-
-## Node.js установлен, но `npm` показывает другую версию
-
-`npm` идёт в комплекте с версией Node.js. Если версии расходятся:
-
-```bash
-which npm
-npm -v
-node -v
-```
-
-Скорее всего в `PATH` остался старый npm из `/usr/bin`. Убирается удалением системного пакета или правкой `PATH`.
-
-Обновить npm до последней версии:
-
-```bash
-npm install -g npm@latest
-```
-
----
-
-## Windows
-
-nvm из этого руководства (`nvm-sh`) работает **только на Linux и macOS**.
-
-На Windows есть три пути:
-
-1. **WSL** (рекомендуется):
-
-```powershell
-wsl --install -d Ubuntu
-```
-
-Далее внутри Ubuntu выполнять все команды из этого репозитория.
-
-2. **nvm-windows** — другой проект, другой набор команд:
-
-```powershell
-winget install CoreyButler.NVMforWindows
-```
-
-3. **Git Bash** — работает частично, установщик nvm может не найти `~/.bashrc`.
-
----
-
-## Как полностью удалить nvm и начать заново
-
-```bash
-# удалить папку nvm
-rm -rf "$NVM_DIR"
-
-# убрать строки nvm из конфига оболочки
-sed -i '/NVM_DIR/d' ~/.bashrc
-sed -i '/nvm.sh/d' ~/.bashrc
-sed -i '/bash_completion/d' ~/.bashrc
-
-# открыть новый терминал
-```
+Она покажет ОС, версии node/npm/nvm, `PATH`, registry и глобальные пакеты.
