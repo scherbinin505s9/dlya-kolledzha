@@ -2,7 +2,7 @@
 
 Готовые команды для Linux: установка **nvm**, обновление **Node.js** и запуск **OpenCode через npx**.
 
-Всё проверено на Ubuntu/Debian, Fedora, Arch, openSUSE и Alpine.
+Подходит для Ubuntu/Debian, Fedora, Arch, openSUSE и Alpine.
 Актуально на ноябрь 2026: LTS-ветки Node.js — **26.x (Lithium)** и **24.x (Krypton)**.
 
 ## Содержание
