@@ -3,6 +3,7 @@ import os
 import webbrowser
 import zipfile
 import tkinter as tk
+from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
 try:
@@ -20,12 +21,17 @@ SECTIONS = (
 )
 
 
-def load_catalog():
+def load_catalog_data():
     try:
         with open(CATALOG_FILE, encoding="utf-8") as file:
             data = json.load(file)
     except (OSError, ValueError):
         return {}
+    return data if isinstance(data, dict) else {}
+
+
+def load_catalog():
+    data = load_catalog_data()
     entries = {}
     for subject, course in data.items():
         if not isinstance(course, dict):
@@ -34,6 +40,81 @@ def load_catalog():
             if isinstance(work, dict) and work.get("name"):
                 entries[subject + "/" + work["name"]] = work
     return entries
+
+
+def add_to_catalog(subject, name, url, deadline):
+    data = load_catalog_data()
+    course = data.get(subject)
+    if not isinstance(course, dict):
+        course = {"course": "", "section": "", "works": []}
+        data[subject] = course
+    works = course.get("works")
+    if not isinstance(works, list):
+        works = []
+        course["works"] = works
+    for work in works:
+        if isinstance(work, dict) and work.get("name") == name:
+            work["url"] = url
+            work["deadline"] = deadline
+            break
+    else:
+        works.append({"name": name, "url": url, "deadline": deadline})
+    with open(CATALOG_FILE, "w", encoding="utf-8", newline="\n") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+
+
+def create_work_files(subject, name, url, deadline):
+    if not subject or not name:
+        raise ValueError("Заполните предмет и название работы.")
+    if any(char in name for char in '<>:"/\\|?*') or name.rstrip(" .") != name:
+        raise ValueError("В названии работы есть недопустимые символы.")
+    if name in (".", ".."):
+        raise ValueError("Недопустимое название работы.")
+    if deadline:
+        try:
+            datetime.strptime(deadline, "%d.%m.%Y")
+        except ValueError:
+            raise ValueError("Срок должен быть в формате ДД.ММ.ГГГГ.")
+    path = os.path.join(BASE, "Готово к отправлению", subject, name)
+    if os.path.exists(path):
+        raise ValueError("Папка уже существует:\n" + path)
+    if len(path) > 240:
+        raise ValueError("Слишком длинный путь к папке работы.")
+    template_path = os.path.join(BASE, "templates", "work", "README.md")
+    with open(template_path, encoding="utf-8") as file:
+        template = file.read()
+    data = load_catalog_data()
+    course = data.get(subject, {})
+    if not isinstance(course, dict):
+        course = {}
+    title = course.get("title") or subject
+    section_title = course.get("section_title", "")
+    card = "\n".join([
+        "| | |",
+        "|---|---|",
+        "| Предмет | {} |".format(title),
+        "| Раздел курса | {} |".format(section_title),
+        "| Задание | Лабораторное задание «{}» |".format(name),
+        "| Дата работы | {} |".format(datetime.now().strftime("%d.%m.%Y")),
+        "| Дата сдачи | — |",
+        "| Статус | Готово к отправке |",
+        "| Оценка | — |",
+        "| Архив |  |",
+    ])
+    if "## Что требовалось" in template:
+        tail = template.split("## Что требовалось", 1)[1]
+        content = "# {}\n\n{}\n\n## Что требовалось{}".format(name, card, tail)
+    else:
+        content = "# {}\n\n{}\n".format(name, card)
+    os.makedirs(path)
+    with open(os.path.join(path, "README.md"), "w", encoding="utf-8", newline="\n") as file:
+        file.write(content)
+    with open(os.path.join(path, "files.txt"), "w", encoding="utf-8", newline="\n") as file:
+        file.write("")
+    if url or deadline:
+        add_to_catalog(subject, name, url, deadline)
+    return path
 
 
 def parse_card(path):
@@ -209,6 +290,10 @@ class Launcher(tk.Tk):
         self.zip_button.pack(side="left", padx=(8, 0))
         self.moodle_button = ttk.Button(buttons, text="Открыть в Moodle", command=self.open_moodle, state="disabled")
         self.moodle_button.pack(side="left", padx=(8, 0))
+        self.prepare_button = ttk.Button(
+            buttons, text="Подготовить к отправке", command=self.prepare_submission, state="disabled"
+        )
+        self.prepare_button.pack(side="left", padx=(8, 0))
 
         bottom = ttk.Frame(self, padding=(16, 0, 16, 12))
         bottom.pack(fill="x")
@@ -218,6 +303,7 @@ class Launcher(tk.Tk):
             foreground="#777777",
         ).pack(side="left")
         ttk.Button(bottom, text="Обновить", command=self.refresh).pack(side="right")
+        ttk.Button(bottom, text="Новая работа", command=self.create_work).pack(side="right", padx=(0, 8))
 
         details.bind("<Configure>", self.on_details_resize)
 
@@ -227,8 +313,8 @@ class Launcher(tk.Tk):
         self.info_label.configure(wraplength=width)
         self.path_label.configure(wraplength=width)
 
-    def refresh(self):
-        selected_key = self.current["key"] if self.current else None
+    def refresh(self, select_key=None):
+        selected_key = select_key if select_key is not None else (self.current["key"] if self.current else None)
         self.works = scan_works()
         self.catalog = load_catalog()
         self.tree.delete(*self.tree.get_children())
@@ -253,7 +339,7 @@ class Launcher(tk.Tk):
         self.meta_label.configure(text="")
         self.info_label.configure(text="")
         self.path_label.configure(text="")
-        for button in (self.open_button, self.readme_button, self.zip_button, self.moodle_button):
+        for button in (self.open_button, self.readme_button, self.zip_button, self.moodle_button, self.prepare_button):
             button.configure(state="disabled")
 
     def on_select(self, event=None):
@@ -296,6 +382,8 @@ class Launcher(tk.Tk):
         self.readme_button.configure(state="normal" if has_readme else "disabled")
         self.zip_button.configure(state="normal")
         self.moodle_button.configure(state="normal" if has_link else "disabled")
+        can_prepare = work["status"] == "Готово к отправке" and has_link
+        self.prepare_button.configure(state="normal" if can_prepare else "disabled")
 
     def on_double_click(self, event):
         row = self.tree.identify_row(event.y)
@@ -377,6 +465,101 @@ class Launcher(tk.Tk):
             messagebox.showinfo("Открыть в Moodle", "Для этой работы нет ссылки в docs/assignments.json.")
             return
         webbrowser.open(link)
+
+    def prepare_submission(self):
+        if not self.current or self.current["status"] != "Готово к отправке":
+            return
+        link = self.catalog.get(self.current["key"], {}).get("url", "")
+        if not link:
+            messagebox.showinfo("Подготовить к отправке", "Для этой работы нет ссылки в docs/assignments.json.")
+            return
+        self.open_folder()
+        webbrowser.open(link)
+
+    def create_work(self):
+        data = load_catalog_data()
+        subjects = [subject for subject, course in data.items() if isinstance(course, dict)]
+        ready_root = os.path.join(BASE, "Готово к отправлению")
+        if os.path.isdir(ready_root):
+            for name in os.listdir(ready_root):
+                if os.path.isdir(os.path.join(ready_root, name)) and name not in subjects:
+                    subjects.append(name)
+        subjects.sort()
+
+        dialog = tk.Toplevel(self)
+        dialog.title("Новая работа")
+        dialog.transient(self)
+        dialog.resizable(False, False)
+        dialog.grab_set()
+
+        form = ttk.Frame(dialog, padding=16)
+        form.pack(fill="both", expand=True)
+        form.columnconfigure(1, weight=1)
+
+        ttk.Label(form, text="Предмет").grid(row=0, column=0, sticky="w", pady=(0, 8))
+        subject_box = ttk.Combobox(form, values=subjects, width=42)
+        subject_box.grid(row=0, column=1, sticky="ew", pady=(0, 8))
+        if self.current:
+            subject_box.set(self.current["subject"])
+        elif subjects:
+            subject_box.set(subjects[0])
+
+        ttk.Label(form, text="Название работы").grid(row=1, column=0, sticky="w", pady=(0, 8))
+        name_entry = ttk.Entry(form, width=42)
+        name_entry.grid(row=1, column=1, sticky="ew", pady=(0, 8))
+
+        ttk.Label(form, text="Ссылка на задание").grid(row=2, column=0, sticky="w", pady=(0, 8))
+        url_entry = ttk.Entry(form, width=42)
+        url_entry.grid(row=2, column=1, sticky="ew", pady=(0, 8))
+
+        ttk.Label(form, text="Срок сдачи").grid(row=3, column=0, sticky="w", pady=(0, 8))
+        deadline_entry = ttk.Entry(form, width=42)
+        deadline_entry.grid(row=3, column=1, sticky="ew", pady=(0, 8))
+
+        hint = ttk.Label(
+            form,
+            text="Срок — в формате ДД.ММ.ГГГГ, можно оставить пустым. Карточка создаётся в «Готово к отправлению».",
+            foreground="#777777",
+            wraplength=520,
+            justify="left",
+        )
+        hint.grid(row=4, column=0, columnspan=2, sticky="w", pady=(0, 8))
+
+        buttons = ttk.Frame(form)
+        buttons.grid(row=5, column=0, columnspan=2, sticky="e")
+
+        def submit():
+            subject = subject_box.get().strip()
+            name = name_entry.get().strip()
+            url = url_entry.get().strip()
+            deadline = deadline_entry.get().strip()
+            try:
+                path = create_work_files(subject, name, url, deadline)
+            except (OSError, ValueError) as error:
+                messagebox.showerror("Новая работа", str(error), parent=dialog)
+                return
+            dialog.destroy()
+            self.refresh(select_key=subject + "/" + name)
+            try:
+                os.startfile(path)
+            except (OSError, AttributeError):
+                pass
+
+        ttk.Button(buttons, text="Создать", command=submit).pack(side="right")
+        ttk.Button(buttons, text="Отмена", command=dialog.destroy).pack(side="right", padx=(0, 8))
+
+        dialog.bind("<Return>", lambda event: submit())
+        dialog.bind("<Escape>", lambda event: dialog.destroy())
+        name_entry.focus_set()
+
+        dialog.update_idletasks()
+        width = 640
+        height = max(280, dialog.winfo_reqheight())
+        x = self.winfo_rootx() + (self.winfo_width() - width) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - height) // 2
+        dialog.geometry("{}x{}+{}+{}".format(width, height, x, y))
+
+        self.wait_window(dialog)
 
 
 def main():
