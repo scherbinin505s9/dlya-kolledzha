@@ -90,6 +90,97 @@ __pycache__/
 .ipynb_checkpoints/
 ```
 
+## Tkinter и PyQt
+
+По «Основам алгоритмизации» GUI делают на Python. Tkinter уже входит в Python,
+PyQt ставится отдельно.
+
+### Tkinter: минимум для лабораторной
+
+```python
+import tkinter as tk
+from tkinter import messagebox
+
+
+def calculate():
+    try:
+        a = float(entry_a.get())
+        b = float(entry_b.get())
+    except ValueError:
+        messagebox.showerror("Ошибка", "Введите числа")
+        return
+    result.config(text=f"Сумма: {a + b}")
+
+
+root = tk.Tk()
+root.title("Калькулятор")
+root.geometry("320x200")
+
+tk.Label(root, text="Первое число").pack()
+entry_a = tk.Entry(root)
+entry_a.pack()
+
+tk.Label(root, text="Второе число").pack()
+entry_b = tk.Entry(root)
+entry_b.pack()
+
+tk.Button(root, text="Сложить", command=calculate).pack(pady=8)
+result = tk.Label(root, text="Сумма: —")
+result.pack()
+
+root.mainloop()
+```
+
+Что проверяют: окно запускается, поля ввода работают, кнопка считает,
+нечисловой ввод не роняет программу, результат обновляется.
+
+### PyQt6
+
+```bash
+source .venv/bin/activate
+pip install PyQt6
+```
+
+```python
+from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+
+
+def on_click():
+    label.setText("Привет!")
+
+
+app = QApplication([])
+window = QWidget()
+window.setWindowTitle("PyQt")
+
+layout = QVBoxLayout()
+label = QLabel("Нажми кнопку")
+button = QPushButton("Нажать")
+button.clicked.connect(on_click)
+layout.addWidget(label)
+layout.addWidget(button)
+window.setLayout(layout)
+window.show()
+
+app.exec()
+```
+
+| Что | Tkinter | PyQt6 |
+|---|---|---|
+| Установка | встроен | `pip install PyQt6` |
+| Простота | проще | больше возможностей |
+| Вид | стандартный | нативный |
+| Для лабы | обычно достаточно | если требует методичка |
+
+### Частые ошибки GUI
+
+| Ошибка | Причина | Решение |
+|---|---|---|
+| `no display name` в WSL | нет графической среды | запускать из Windows или настроить X-сервер |
+| Окно не появляется | забыт `mainloop()` / `app.exec()` | добавить в конец |
+| Кнопка не реагирует | обработчик не привязан | `command=` в Tkinter, `clicked.connect` в PyQt |
+| `ValueError` при вводе | `float("abc")` | обернуть в `try/except` и показать сообщение |
+
 ## Частые ошибки
 
 | Ошибка | Причина | Решение |

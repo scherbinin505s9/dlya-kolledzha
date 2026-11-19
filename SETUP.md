@@ -112,8 +112,12 @@ bash scripts/check-env.sh
 bash scripts/install-nvm.sh          # 1. nvm
 bash scripts/update-node.sh          # 2. Node.js LTS
 bash scripts/install-cli-tools.sh    # 3. утилиты
-bash scripts/setup-git.sh --ssh       # 4. git
+bash scripts/setup-git.sh --ssh      # 4. git
+bash scripts/install-dotnet.sh 8.0   # 5. .NET SDK для C# (необязательно)
 ```
+
+.NET ставится без root в `~/.dotnet`. Версию берите ту, что требует преподаватель:
+`10.0` — текущий LTS, `8.0` — если в колледже старые методички.
 
 OpenCode ставить не обязательно — достаточно `npx`:
 

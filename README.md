@@ -35,17 +35,56 @@ npx --yes @opencode/cli@latest
 
 ## Разделы
 
+Карта «предмет → раздел» под специальность **09.02.07 Информационные системы
+и программирование** (колледж АлтГУ): [docs/asu-isp.md](docs/asu-isp.md).
+
+### Настройка и инструменты
+
 | # | Тема | О чём |
 |---|---|---|
 | 01 | [Linux: база](docs/linux-basics.md) | файлы, права, пакеты, процессы, порты, сеть, архивы |
 | 02 | [Node.js: nvm, обновление, OpenCode](docs/node-nvm-opencode.md) | установка nvm, LTS, перенос пакетов, `npx @opencode/cli` |
 | 03 | [Git и GitHub](docs/git-github.md) | настройка, SSH-ключ, ветки, откат, типичные ошибки |
-| 04 | [Python](docs/python.md) | venv, pip, Jupyter, PEP 668, структура проекта |
+| 04 | [Python](docs/python.md) | venv, pip, Jupyter, Tkinter/PyQt, PEP 668, структура проекта |
 | 05 | [Docker](docs/docker.md) | установка без sudo, контейнеры, compose, сборка образов |
 | 06 | [VS Code](docs/vscode.md) | установка, расширения, настройки, Remote-SSH |
 | 07 | [Консольные утилиты](docs/cli-tools.md) | rg, fd, bat, jq, tree, htop, ncdu, tmux, алиасы |
 | 08 | [Windows и WSL](docs/windows-wsl.md) | winget, WSL, файлы, VS Code + WSL |
 | 09 | [Частые ошибки](docs/troubleshooting.md) | сводка по всем темам: что писать, когда всё сломалось |
+
+### Предметы 09.02.07
+
+| # | Тема | Предмет |
+|---|---|---|
+| 10 | [Карта специальности](docs/asu-isp.md) | текущие курсы с портала → разделы |
+| 11 | [Алгоритмы и Python](docs/algorithms.md) | Основы алгоритмизации и программирования |
+| 12 | [Базы данных и SQL](docs/databases-sql.md) | Основы проектирования баз данных |
+| 13 | [Веб и интерфейсы](docs/web-basics.md) | Основы веб-технологий, ПиРИП |
+| 14 | [Linux, Windows, PowerShell](docs/windows-wsl.md) | Операционные системы и среды |
+| 15 | [Отчёты и документация](docs/reports-gost.md) | все предметы |
+| 16 | [C# и .NET](docs/csharp-dotnet.md) | на будущее / демоэкзамен |
+| 17 | [Компьютерные сети](docs/networks.md) | на будущее |
+| 18 | [Тестирование и QA](docs/testing-qa.md) | на будущее / демоэкзамен |
+| 19 | [Архитектура и информатика](docs/hardware.md) | Информатика |
+
+## Скилл для агента: браузер
+
+В [.opencode/skills/browser-control/](.opencode/skills/browser-control/SKILL.md) лежит готовый скилл:
+агент учится открывать сайты, читать страницы, кликать, заполнять формы
+и снимать скриншоты через Playwright MCP.
+
+- [SKILL.md](.opencode/skills/browser-control/SKILL.md) — правила работы;
+- [references/setup.md](.opencode/skills/browser-control/references/setup.md) — как подключить MCP;
+- [references/tools.md](.opencode/skills/browser-control/references/tools.md) — все инструменты.
+
+Проверка подключения:
+
+```bash
+opencode mcp list
+```
+
+Ожидается `✓ playwright connected`. Скилл подхватывается автоматически, когда
+OpenCode открыт в папке этого репозитория.
 
 ## Скрипты
 
@@ -64,6 +103,7 @@ chmod +x *.sh
 | `opencode-npx.sh` | запуск `npx @opencode/cli@latest` |
 | `install-cli-tools.sh` | rg, fd, bat, jq, tree, htop, ncdu, tmux |
 | `setup-git.sh` | имя, почта, ветка `main`, алиасы, SSH-ключ (`--ssh`) |
+| `install-dotnet.sh` | .NET SDK без root (по умолчанию 10.0, можно `8.0`) |
 | `check-env.sh` | диагностика: ОС, node, npm, nvm, PATH, registry |
 
 Примеры:
@@ -82,7 +122,13 @@ SKIP_TOOLS=1 ./bootstrap.sh                     # без консольных у
 dlya-kolledzha/
 ├── README.md                  # эта страница
 ├── SETUP.md                   # что делает bootstrap и как его настроить
+├── .opencode/
+│   └── skills/
+│       └── browser-control/   # скилл: управление браузером
+│           ├── SKILL.md
+│           └── references/
 ├── docs/                      # шпаргалки по темам
+│   ├── asu-isp.md             # карта специальности 09.02.07
 │   ├── linux-basics.md
 │   ├── node-nvm-opencode.md
 │   ├── git-github.md
@@ -91,6 +137,14 @@ dlya-kolledzha/
 │   ├── vscode.md
 │   ├── cli-tools.md
 │   ├── windows-wsl.md
+│   ├── algorithms.md
+│   ├── csharp-dotnet.md
+│   ├── databases-sql.md
+│   ├── networks.md
+│   ├── testing-qa.md
+│   ├── web-basics.md
+│   ├── hardware.md
+│   ├── reports-gost.md
 │   └── troubleshooting.md
 └── scripts/                   # готовые команды
     ├── bootstrap.sh
@@ -99,6 +153,7 @@ dlya-kolledzha/
     ├── update-node.sh
     ├── opencode-npx.sh
     ├── install-cli-tools.sh
+    ├── install-dotnet.sh
     ├── setup-git.sh
     └── check-env.sh
 ```
@@ -125,10 +180,10 @@ git push
 
 - [ ] C/C++: gcc, g++, make, отладка в VS Code
 - [ ] Java: JDK, Maven, запуск лабораторных
-- [ ] SQL: PostgreSQL и MySQL в Docker, шпаргалка по запросам
-- [ ] Сети: `ip`, `ss`, `tcpdump`, Wireshark
-- [ ] Алгоритмы и структуры данных: шаблоны на Python/C++
-- [ ] LaTeX и оформление отчётов
+- [ ] Мобильная разработка (МДК.01.03): Kotlin + Android Studio или Flutter
+- [ ] Численные методы (ОП.10): реализация на Python
+- [ ] ИИ и большие данные (ОП.13): pandas, основы моделей
+- [ ] Управление IT-проектами (ОП.15): Scrum, Kanban, Trello
 - [ ] Bash-скрипты: циклы, условия, аргументы
 
 ## Лицензия
