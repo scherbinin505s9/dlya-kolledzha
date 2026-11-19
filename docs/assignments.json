@@ -1,0 +1,23 @@
+{
+  "ПиРИП": {
+    "course": "https://portal.edu.asu.ru/course/view.php?id=8709",
+    "section": "https://portal.edu.asu.ru/course/section.php?id=103535",
+    "works": [
+      {
+        "name": "Применение тегов HTML при создании web-страниц",
+        "url": "https://portal.edu.asu.ru/mod/assign/view.php?id=359173",
+        "deadline": ""
+      },
+      {
+        "name": "Создание формы на html-странице",
+        "url": "https://portal.edu.asu.ru/mod/assign/view.php?id=359174",
+        "deadline": ""
+      },
+      {
+        "name": "Форматирование web-страниц с использованием каскадных таблиц стилей",
+        "url": "https://portal.edu.asu.ru/mod/assign/view.php?id=359176",
+        "deadline": ""
+      }
+    ]
+  }
+}

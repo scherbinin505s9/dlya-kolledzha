@@ -12,7 +12,7 @@ except (AttributeError, OSError):
     pass
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LINKS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "links.json")
+CATALOG_FILE = os.path.join(BASE, "docs", "assignments.json")
 
 SECTIONS = (
     ("Готово к отправлению", "Готово к отправке"),
@@ -20,13 +20,42 @@ SECTIONS = (
 )
 
 
-def load_links():
+def load_catalog():
     try:
-        with open(LINKS_FILE, encoding="utf-8") as file:
+        with open(CATALOG_FILE, encoding="utf-8") as file:
             data = json.load(file)
     except (OSError, ValueError):
         return {}
-    return data if isinstance(data, dict) else {}
+    entries = {}
+    for subject, course in data.items():
+        if not isinstance(course, dict):
+            continue
+        for work in course.get("works", []):
+            if isinstance(work, dict) and work.get("name"):
+                entries[subject + "/" + work["name"]] = work
+    return entries
+
+
+def parse_card(path):
+    try:
+        with open(path, encoding="utf-8") as file:
+            text = file.read()
+    except OSError:
+        return {}
+    intro = text.split("\n## ", 1)[0]
+    fields = {}
+    for line in intro.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        parts = [part.strip() for part in line.strip("|").split("|")]
+        if len(parts) != 2:
+            continue
+        key, value = parts
+        if not key or set(key) <= {"-", ":"}:
+            continue
+        fields[key] = value
+    return fields
 
 
 def scan_works():
@@ -41,7 +70,8 @@ def scan_works():
                 continue
             for name in sorted(os.listdir(subject_path)):
                 path = os.path.join(subject_path, name)
-                if os.path.isdir(path):
+                readme = os.path.join(path, "README.md")
+                if os.path.isdir(path) and os.path.isfile(readme):
                     works.append({
                         "subject": subject,
                         "name": name,
@@ -54,15 +84,47 @@ def scan_works():
 
 
 def collect_files(folder):
+    manifest = os.path.join(folder, "files.txt")
     files = []
+    seen = set()
+
+    def add(path):
+        if path not in seen:
+            seen.add(path)
+            files.append(path)
+
+    if os.path.isfile(manifest):
+        missing = []
+        with open(manifest, encoding="utf-8") as file:
+            lines = [line.strip() for line in file if line.strip()]
+        for line in lines:
+            normalized = line.replace("\\", "/")
+            if ".." in normalized.split("/"):
+                missing.append(line)
+                continue
+            parts = [part for part in normalized.rstrip("/").split("/") if part]
+            path = os.path.join(folder, *parts)
+            if os.path.isdir(path):
+                for root, dirs, names in os.walk(path):
+                    dirs[:] = [name for name in dirs if not name.startswith(".")]
+                    for name in names:
+                        add(os.path.join(root, name))
+            elif os.path.isfile(path):
+                add(path)
+            else:
+                missing.append(line)
+        if missing:
+            raise ValueError("В files.txt указаны отсутствующие пути:\n" + "\n".join(missing))
+        return files, True
+
     for root, dirs, names in os.walk(folder):
         dirs[:] = [name for name in dirs if not name.startswith(".")]
         for name in names:
             lower = name.lower()
             if lower == "readme.md" or lower.endswith(".zip"):
                 continue
-            files.append(os.path.join(root, name))
-    return files
+            add(os.path.join(root, name))
+    return files, False
 
 
 def format_size(size):
@@ -77,17 +139,18 @@ class Launcher(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Учебный лаунчер")
-        self.minsize(780, 520)
+        self.minsize(780, 560)
         self.works = []
-        self.links = load_links()
+        self.catalog = load_catalog()
         self.current = None
+        self.card = {}
         self.build_ui()
         self.refresh()
         self.place_window()
 
     def place_window(self):
         width = 940
-        height = 620
+        height = 660
         x = (self.winfo_screenwidth() - width) // 2
         y = (self.winfo_screenheight() - height) // 2
         self.geometry("{}x{}+{}+{}".format(width, height, x, y))
@@ -130,7 +193,9 @@ class Launcher(tk.Tk):
         self.title_label = ttk.Label(details, text="Выберите работу в списке", font=("Segoe UI", 11, "bold"))
         self.title_label.pack(anchor="w")
         self.meta_label = ttk.Label(details, text="", foreground="#555555")
-        self.meta_label.pack(anchor="w", pady=(2, 6))
+        self.meta_label.pack(anchor="w", pady=(2, 4))
+        self.info_label = ttk.Label(details, text="", foreground="#555555", justify="left")
+        self.info_label.pack(anchor="w", pady=(0, 4))
         self.path_label = ttk.Label(details, text="", foreground="#777777", justify="left")
         self.path_label.pack(anchor="w", pady=(0, 10))
 
@@ -159,12 +224,13 @@ class Launcher(tk.Tk):
     def on_details_resize(self, event):
         width = max(300, event.width - 40)
         self.title_label.configure(wraplength=width)
+        self.info_label.configure(wraplength=width)
         self.path_label.configure(wraplength=width)
 
     def refresh(self):
         selected_key = self.current["key"] if self.current else None
         self.works = scan_works()
-        self.links = load_links()
+        self.catalog = load_catalog()
         self.tree.delete(*self.tree.get_children())
         selected_item = None
         for index, work in enumerate(self.works):
@@ -182,8 +248,10 @@ class Launcher(tk.Tk):
 
     def clear_details(self):
         self.current = None
+        self.card = {}
         self.title_label.configure(text="Выберите работу в списке")
         self.meta_label.configure(text="")
+        self.info_label.configure(text="")
         self.path_label.configure(text="")
         for button in (self.open_button, self.readme_button, self.zip_button, self.moodle_button):
             button.configure(state="disabled")
@@ -195,11 +263,35 @@ class Launcher(tk.Tk):
             return
         self.current = self.works[int(selection[0])]
         work = self.current
+        self.card = parse_card(os.path.join(work["path"], "README.md"))
+        entry = self.catalog.get(work["key"], {})
         self.title_label.configure(text=work["name"])
         self.meta_label.configure(text=work["subject"] + " · " + work["status"])
+
+        details = []
+        status = self.card.get("Статус", "")
+        if status and status != work["status"]:
+            details.append("Статус: " + status)
+        grade = self.card.get("Оценка", "")
+        if grade and grade != "—":
+            details.append("Оценка: " + grade)
+        sent_date = self.card.get("Дата сдачи", "")
+        if sent_date and sent_date != "—":
+            details.append("Сдано: " + sent_date)
+        else:
+            work_date = self.card.get("Дата работы", "")
+            if work_date:
+                details.append("Дата работы: " + work_date)
+        deadline = entry.get("deadline", "")
+        details.append("Срок сдачи: " + (deadline if deadline else "не указан"))
+        archive = self.card.get("Архив", "")
+        if archive and archive != "—":
+            details.append("Архив: " + archive)
+        self.info_label.configure(text=" · ".join(details))
+
         self.path_label.configure(text=work["path"])
         has_readme = os.path.isfile(os.path.join(work["path"], "README.md"))
-        has_link = work["key"] in self.links
+        has_link = bool(entry.get("url"))
         self.open_button.configure(state="normal")
         self.readme_button.configure(state="normal" if has_readme else "disabled")
         self.zip_button.configure(state="normal")
@@ -235,15 +327,29 @@ class Launcher(tk.Tk):
         if not self.current:
             return
         work = self.current
-        files = collect_files(work["path"])
+        try:
+            files, has_manifest = collect_files(work["path"])
+        except ValueError as error:
+            messagebox.showerror("Собрать ZIP", str(error))
+            return
         if not files:
             messagebox.showwarning("Собрать ZIP", "В папке работы нет файлов для архива.")
             return
+        if not has_manifest:
+            question = (
+                "Файл files.txt не найден. В архив попадут все файлы работы, "
+                "кроме README.md и архивов. Продолжить?"
+            )
+            if not messagebox.askyesno("Собрать ZIP", question):
+                return
+        archive_name = self.card.get("Архив", "")
+        if not archive_name or archive_name == "—" or not archive_name.lower().endswith(".zip"):
+            archive_name = work["name"] + ".zip"
         target = filedialog.asksaveasfilename(
             parent=self,
             title="Сохранить архив",
             initialdir=work["path"],
-            initialfile=work["name"] + ".zip",
+            initialfile=archive_name,
             defaultextension=".zip",
             filetypes=[("ZIP-архив", "*.zip")],
         )
@@ -266,9 +372,9 @@ class Launcher(tk.Tk):
     def open_moodle(self):
         if not self.current:
             return
-        link = self.links.get(self.current["key"])
+        link = self.catalog.get(self.current["key"], {}).get("url", "")
         if not link:
-            messagebox.showinfo("Открыть в Moodle", "Для этой работы ссылка не задана в links.json.")
+            messagebox.showinfo("Открыть в Moodle", "Для этой работы нет ссылки в docs/assignments.json.")
             return
         webbrowser.open(link)
 
