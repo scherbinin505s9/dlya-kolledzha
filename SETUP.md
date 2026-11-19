@@ -119,17 +119,21 @@ bash scripts/install-dotnet.sh 8.0   # 5. .NET SDK для C# (необязате
 .NET ставится без root в `~/.dotnet`. Версию берите ту, что требует преподаватель:
 `10.0` — текущий LTS, `8.0` — если в колледже старые методички.
 
-OpenCode ставить не обязательно — достаточно `npx`:
-
-```bash
-npx --yes @opencode/cli@latest
-```
-
-Постоянная установка:
+OpenCode ставится одной командой:
 
 ```bash
 npm install -g @opencode/cli
 ```
+
+Запуск из папки репозитория:
+
+```bash
+cd dlya-kolledzha
+opencode
+```
+
+Если Node.js ещё нет, сначала запустите `bootstrap` или скачайте LTS с
+[nodejs.org](https://nodejs.org/).
 
 ## Удаление
 
