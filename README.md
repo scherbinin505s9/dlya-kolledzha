@@ -275,7 +275,7 @@ sudo apk add nodejs npm                        # Alpine
 В папке [`scripts/`](scripts) лежат те же команды в виде исполняемых файлов:
 
 ```bash
-git clone <адрес-этого-репозитория>
+git clone https://github.com/scherbinin505s9/dlya-kolledzha.git
 cd dlya-kolledzha/scripts
 chmod +x *.sh
 
@@ -290,7 +290,7 @@ chmod +x *.sh
 Скрипты можно запускать и без клонирования репозитория:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<ваш-логин>/dlya-kolledzha/main/scripts/setup-all.sh | bash
+curl -fsSL https://raw.githubusercontent.com/scherbinin505s9/dlya-kolledzha/main/scripts/setup-all.sh | bash
 ```
 
 ---
