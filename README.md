@@ -131,6 +131,7 @@ SKIP_TOOLS=1 ./bootstrap.sh                     # без консольных у
 ```
 dlya-kolledzha/
 ├── README.md                  # эта страница
+├── AGENTS.md                  # правила для агента: как делать учебные работы
 ├── SETUP.md                   # что делает bootstrap и как его настроить
 ├── .opencode/
 │   └── skills/
