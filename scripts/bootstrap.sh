@@ -35,20 +35,36 @@ fi
 
 step() { printf '\n===== %s =====\n' "$1"; }
 
+download() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$1" -o "$2"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$2" "$1"
+  else
+    return 1
+  fi
+}
+
+# При запуске через "curl | bash" рядом нет остальных скриптов — скачиваем их сразу,
+# чтобы упасть в самом начале, а не в середине установки.
+if [ "$LOCAL" = "0" ]; then
+  echo "==> Скачиваю остальные скрипты"
+  for f in install-nvm.sh update-node.sh install-cli-tools.sh setup-git.sh; do
+    download "$REPO_RAW/$f" "$TMP_DIR/$f"
+    if [ ! -s "$TMP_DIR/$f" ]; then
+      echo "Ошибка: не удалось скачать $REPO_RAW/$f" >&2
+      exit 1
+    fi
+  done
+fi
+
 script_path() {
   local name="$1"
-  local path
   if [ "$LOCAL" = "1" ]; then
-    path="$DIR/$name"
+    printf '%s\n' "$DIR/$name"
   else
-    path="$TMP_DIR/$name"
-    curl -fsSL "$REPO_RAW/$name" -o "$path"
+    printf '%s\n' "$TMP_DIR/$name"
   fi
-  if [ ! -s "$path" ]; then
-    echo "Ошибка: не удалось получить скрипт $name" >&2
-    exit 1
-  fi
-  printf '%s\n' "$path"
 }
 
 if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
