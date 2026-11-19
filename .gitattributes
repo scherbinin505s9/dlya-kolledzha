@@ -1,0 +1,5 @@
+# Репозиторий ориентирован на Linux: все текстовые файлы — с LF.
+# Иначе bash-скрипты падают с "bad interpreter: /bin/bash^M".
+* text=auto eol=lf
+
+*.sh text eol=lf
