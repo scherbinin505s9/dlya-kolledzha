@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Анкета посетителя ресторана</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px 12px;
+      background: #fdf1e7;
+      color: #333;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+    }
+
+    .card {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      color: #8b1a1a;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    fieldset {
+      margin: 0 0 18px;
+      padding: 10px 16px 14px;
+      border: 2px solid #7fd3e6;
+      border-radius: 4px;
+    }
+
+    legend {
+      padding: 0 6px;
+      color: #4a7f95;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 260px);
+      gap: 8px 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    label,
+    .question {
+      color: #8b1a1a;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid #a9a9a9;
+      border-radius: 2px;
+      background: #fff;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 64px;
+      resize: vertical;
+    }
+
+    .question {
+      margin: 4px 0 6px;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .options:last-child {
+      margin-bottom: 0;
+    }
+
+    .options label {
+      color: #333;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    input[type="radio"] {
+      margin-right: 6px;
+    }
+
+    input[type="submit"] {
+      padding: 8px 24px;
+      border: 1px solid #3c93ad;
+      border-radius: 4px;
+      background: linear-gradient(#9fe0ee, #59b7cf);
+      color: #123;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    input[type="submit"]:hover {
+      background: linear-gradient(#8ad6e7, #47a8c2);
+    }
+
+    @media (max-width: 520px) {
+      .row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Анкета посетителя ресторана</h1>
+
+    <form action="#" method="post">
+      <fieldset>
+        <legend>Контактная информация</legend>
+
+        <div class="row">
+          <label for="name">Имя</label>
+          <input id="name" name="name" type="text">
+        </div>
+
+        <div class="row">
+          <label for="phone">Телефон</label>
+          <input id="phone" name="phone" type="text">
+        </div>
+
+        <div class="row">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email">
+        </div>
+
+        <div class="row">
+          <label for="visit-date">Дата посещения</label>
+          <input id="visit-date" name="visit_date" type="date">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Персональная информация</legend>
+
+        <div class="row">
+          <label for="age">Возраст</label>
+          <input id="age" name="age" type="number" min="1" max="100" step="1">
+        </div>
+
+        <div class="row">
+          <label for="cuisine">Любимая кухня</label>
+          <select id="cuisine" name="cuisine">
+            <option value="russian" selected>Русская</option>
+            <option value="italian">Итальянская</option>
+            <option value="japanese">Японская</option>
+            <option value="chinese">Китайская</option>
+            <option value="european">Европейская</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="wishes">Какие блюда Вы хотели бы увидеть в меню?</label>
+          <textarea id="wishes" name="wishes" rows="3"></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Оценка нашего заведения</legend>
+
+        <p class="question">Почему Вы выбрали наше заведение?</p>
+        <div class="options">
+          <label><input type="radio" name="reason" value="near"> Недалеко от дома/работы</label>
+          <label><input type="radio" name="reason" value="advert"> Увидел рекламу</label>
+          <label><input type="radio" name="reason" value="advice"> Посоветовали</label>
+          <label><input type="radio" name="reason" value="price"> Оптимальное соотношение цены и качества</label>
+        </div>
+
+        <p class="question">Вы будете рекомендовать наше заведение своим знакомым?</p>
+        <div class="options">
+          <label><input type="radio" name="recommend" value="yes"> Да</label>
+          <label><input type="radio" name="recommend" value="no"> Нет</label>
+        </div>
+      </fieldset>
+
+      <input type="submit" value="Отправить">
+    </form>
+  </main>
+</body>
+</html>
